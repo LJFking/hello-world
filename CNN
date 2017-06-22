@@ -1,0 +1,290 @@
+def normalize(x):
+    """
+    Normalize a list of sample image data in the range of 0 to 1
+    : x: List of image data.  The image shape is (32, 32, 3)
+    : return: Numpy array of normalize data
+    """
+    # TODO: Implement Function
+    x_normalized = x.astype('float32')
+    x_normalized =(x_normalized-x_normalized.min())/(x_normalized.max()-x_normalized.min()) 
+    return x_normalized
+
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+tests.test_normalize(normalize)
+
+def one_hot_encode(x):
+    """
+    One hot encode a list of sample labels. Return a one-hot encoded vector for each label.
+    : x: List of sample Labels
+    : return: Numpy array of one-hot encoded labels
+    """
+    # TODO: Implement Function
+    x_one_hot_encoder = np.zeros(shape=(len(x),10), dtype='float32')
+    for i in range(len(x)):
+        x_one_hot_encoder[i,x[i]] = 1
+    return x_one_hot_encoder
+
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+# one_hot_encode([0,1,2,3,4,5,6,7,8,9])
+tests.test_one_hot_encode(one_hot_encode)
+
+import tensorflow as tf
+
+def neural_net_image_input(image_shape):
+    """
+    Return a Tensor for a batch of image input
+    : image_shape: Shape of the images
+    : return: Tensor for image input.
+    """
+    # TODO: Implement Function
+    x = tf.placeholder(tf.float32, shape=[None, image_shape[0], image_shape[1], image_shape[2]], name='x')
+    return x
+
+
+def neural_net_label_input(n_classes):
+    """
+    Return a Tensor for a batch of label input
+    : n_classes: Number of classes
+    : return: Tensor for label input.
+    """
+    # TODO: Implement Function
+    y = tf.placeholder(tf.float32, shape=[None, n_classes], name='y')
+    return y
+
+
+def neural_net_keep_prob_input():
+    """
+    Return a Tensor for keep probability
+    : return: Tensor for keep probability.
+    """
+    # TODO: Implement Function
+    keep_prob = tf.placeholder(tf.float32, name='keep_prob')
+    return keep_prob
+
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+tf.reset_default_graph()
+tests.test_nn_image_inputs(neural_net_image_input)
+tests.test_nn_label_inputs(neural_net_label_input)
+tests.test_nn_keep_prob_inputs(neural_net_keep_prob_input)
+
+def conv2d_maxpool(x_tensor, conv_num_outputs, conv_ksize, conv_strides, pool_ksize, pool_strides):
+    """
+    Apply convolution then max pooling to x_tensor
+    :param x_tensor: TensorFlow Tensor
+    :param conv_num_outputs: Number of outputs for the convolutional layer
+    :param conv_ksize: kernal size 2-D Tuple for the convolutional layer
+    :param conv_strides: Stride 2-D Tuple for convolution
+    :param pool_ksize: kernal size 2-D Tuple for pool
+    :param pool_strides: Stride 2-D Tuple for pool
+    : return: A tensor that represents convolution and max pooling of x_tensor
+    """
+    # TODO: Implement Function
+    weight = tf.Variable(tf.truncated_normal(shape=[*conv_ksize,x_tensor.shape[3].value,conv_num_outputs],mean=0.,stddev=5e-2))
+    bias = tf.Variable(tf.zeros(conv_num_outputs))
+    conv = tf.nn.conv2d(x_tensor, weight, [1,*conv_strides,1], padding='SAME')
+    conv = tf.nn.bias_add(conv,bias)
+    conv = tf.nn.relu(conv)
+    conv_pool = tf.nn.max_pool(conv, [1,*pool_ksize,1], [1,*pool_strides,1], padding='SAME')
+    return conv_pool
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+tests.test_con_pool(conv2d_maxpool)
+
+
+def flatten(x_tensor):
+    """
+    Flatten x_tensor to (Batch Size, Flattened Image Size)
+    : x_tensor: A tensor of size (Batch Size, ...), where ... are the image dimensions.
+    : return: A tensor of size (Batch Size, Flattened Image Size).
+    """
+    # TODO: Implement Function
+    return tf.contrib.layers.flatten(x_tensor)
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+tests.test_flatten(flatten)
+
+def fully_conn(x_tensor, num_outputs):
+    """
+    Apply a fully connected layer to x_tensor using weight and bias
+    : x_tensor: A 2-D tensor where the first dimension is batch size.
+    : num_outputs: The number of output that the new tensor should be.
+    : return: A 2-D tensor where the second dimension is num_outputs.
+    """
+    # TODO: Implement Function
+    dim = x_tensor.shape[1].value
+    weight = tf.Variable(tf.truncated_normal(shape=[dim, num_outputs],stddev=5e-2))
+    bias = tf.Variable(tf.zeros(num_outputs))
+    local = tf.nn.relu(tf.matmul(x_tensor,weight)+bias)
+    # print(local)
+    return local
+
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+tests.test_fully_conn(fully_conn)
+
+def output(x_tensor, num_outputs):
+    """
+    Apply a output layer to x_tensor using weight and bias
+    : x_tensor: A 2-D tensor where the first dimension is batch size.
+    : num_outputs: The number of output that the new tensor should be.
+    : return: A 2-D tensor where the second dimension is num_outputs.
+    """
+    # TODO: Implement Function
+    dim = x_tensor.shape[1].value
+    weight = tf.Variable(tf.truncated_normal(shape=[dim, num_outputs],stddev=5e-2))
+    bias = tf.Variable(tf.zeros(num_outputs))
+    logits = tf.add(tf.matmul(x_tensor,weight),bias)
+    # print(logits)
+    return logits
+
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+tests.test_output(output)
+
+def conv_net(x, keep_prob):
+    """
+    Create a convolutional neural network model
+    : x: Placeholder tensor that holds image data.
+    : keep_prob: Placeholder tensor that hold dropout keep probability.
+    : return: Tensor that represents logits
+    """
+    # TODO: Apply 1, 2, or 3 Convolution and Max Pool layers
+    #    Play around with different number of outputs, kernel size and stride
+    # Function Definition from Above:
+    #    conv2d_maxpool(x_tensor, conv_num_outputs, conv_ksize, conv_strides, pool_ksize, pool_strides)
+    conv1 = conv2d_maxpool(x, 64, [5,5], [1,1], [3,3], [2,2])
+    conv1_dropout = tf.nn.dropout(conv1, keep_prob)
+    conv2 = conv2d_maxpool(conv1_dropout, 64, [5,5], [1,1], [3,3], [2,2])
+    conv2_dropout = tf.nn.dropout(conv2, keep_prob)
+    conv3 = conv2d_maxpool(conv2_dropout, 64, [5,5], [1,1], [3,3], [2,2])
+    conv3_dropout = tf.nn.dropout(conv3, keep_prob)
+    
+
+    # TODO: Apply a Flatten Layer
+    # Function Definition from Above:
+    #   flatten(x_tensor)
+    reshape = flatten(conv2_dropout)
+    
+
+    # TODO: Apply 1, 2, or 3 Fully Connected Layers
+    #    Play around with different number of outputs
+    # Function Definition from Above:
+    #   fully_conn(x_tensor, num_outputs)
+    fully_conn1 = fully_conn(reshape, 300)
+    fully_conn1_dropout = tf.nn.dropout(fully_conn1, keep_prob)
+    fully_conn2 = fully_conn(fully_conn1_dropout, 300)
+    fully_conn2_dropout = tf.nn.dropout(fully_conn2, keep_prob)
+    
+    # TODO: Apply an Output Layer
+    #    Set this to the number of classes
+    # Function Definition from Above:
+    #   output(x_tensor, num_outputs)
+    logits = output(fully_conn2_dropout, 10)
+    
+    
+    # TODO: return output
+    return logits
+
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+
+##############################
+## Build the Neural Network ##
+##############################
+
+# Remove previous weights, bias, inputs, etc..
+tf.reset_default_graph()
+
+# Inputs
+x = neural_net_image_input((32, 32, 3))
+y = neural_net_label_input(10)
+keep_prob = neural_net_keep_prob_input()
+
+# Model
+logits = conv_net(x, keep_prob)
+
+# Name logits Tensor, so that is can be loaded from disk after training
+logits = tf.identity(logits, name='logits')
+
+# Loss and Optimizer
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y))
+optimizer = tf.train.AdamOptimizer().minimize(cost)
+
+# Accuracy
+correct_pred = tf.equal(tf.argmax(logits, 1), tf.argmax(y, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32), name='accuracy')
+
+tests.test_conv_net(conv_net)
+
+
+def train_neural_network(session, optimizer, keep_probability, feature_batch, label_batch):
+    """
+    Optimize the session on a batch of images and labels
+    : session: Current TensorFlow session
+    : optimizer: TensorFlow optimizer function
+    : keep_probability: keep probability
+    : feature_batch: Batch of Numpy image data
+    : label_batch: Batch of Numpy label data
+    """
+    # TODO: Implement Function
+    session.run(optimizer, feed_dict={
+            x: feature_batch,
+            y: label_batch,
+            keep_prob: keep_probability
+        })
+ 
+
+"""
+DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+"""
+tests.test_train_nn(train_neural_network)
+
+
+def print_stats(session, feature_batch, label_batch, cost, accuracy):
+    """
+    Print information about loss and validation accuracy
+    : session: Current TensorFlow session
+    : feature_batch: Batch of Numpy image data
+    : label_batch: Batch of Numpy label data
+    : cost: TensorFlow cost function
+    : accuracy: TensorFlow accuracy function
+    """
+    # TODO: Implement Function
+    loss = session.run(cost, feed_dict={
+        x:feature_batch,
+        y:label_batch,
+        keep_prob:1.0
+    })
+    
+    valid_acc = session.run(accuracy, feed_dict={
+        x:feature_batch,
+        y:label_batch,
+        keep_prob:1.0
+    })
+    
+    print('Loss: {:10.5f} Validation Accuracy: {:.5f}'.format(loss, valid_acc))
+    
+    
+    # TODO: Tune Parameters
+epochs = 50
+batch_size = 64
+keep_probability = 0.5
